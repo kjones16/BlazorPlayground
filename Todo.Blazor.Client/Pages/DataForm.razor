@@ -1,0 +1,98 @@
+﻿@page "/formdata"
+@inject HttpClient Http
+@using Todo.Blazor.Shared.Models;
+
+<h1>Edit Todo</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="exampleFormControlSelect1">Example todo</label>
+                <select class="form-control" onchange="@OnSelected">
+                    @foreach (var todo in _allTodos)
+                    {
+                        <option value=@todo.Id>@todo.Title</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<EditForm Model="@_selectedTodo" OnValidSubmit="@OnSave">
+    <DataAnnotationsValidator />
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label for="Title">Title</label>
+                    <InputText Id="titleInput" class="form-control" bind-value="@_selectedTodo.Title" />
+                    <ValidationMessage For="@(() => _selectedTodo.Title)" />
+                </div>
+            </div>
+         </div>
+        <div class="row">
+            <div class="col">
+                <div class="form-check">
+                    <InputCheckbox Id="isCompleteInput" class="form-check-input" bind-value="@_selectedTodo.IsComplete" />
+                    <label class="form-check-label" for="exampleCheck1">Is Complete</label>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <br />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <button class="btn btn-primary" type="submit">Submit</button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@functions {
+    TodoItem _selectedTodo = new TodoItem();
+    IList<TodoItem> _allTodos = new List<TodoItem>();
+
+    protected override async Task OnInitAsync()
+    {
+        await LoadAllTodos();
+
+        var result = await Http.GetJsonAsync<TodoItem>($"http://localhost:50763/api/todoitem/{_selectedTodo.Id}");
+
+        if (result != null)
+        {
+            _selectedTodo = result;
+        }
+    }
+
+    protected async Task OnSave()
+    {
+        if (_selectedTodo != null)
+        {
+            await Http.PutJsonAsync($"http://localhost:50763/api/todoitem/{_selectedTodo.Id}", _selectedTodo);
+            _selectedTodo = await Http.GetJsonAsync<TodoItem>($"http://localhost:50763/api/todoitem/{_selectedTodo.Id}");
+        }
+    }
+
+    protected void OnSelected(UIChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out var id))
+        {
+            _selectedTodo = _allTodos.FirstOrDefault(t => t.Id == id);
+        }
+    }
+
+    private async Task LoadAllTodos()
+    {
+        _allTodos = await Http.GetJsonAsync<IList<TodoItem>>("http://localhost:50763/api/todolist/1/todoitem");
+
+        if (_allTodos != null && _allTodos.Any())
+        {
+            _selectedTodo = _allTodos.First();
+        }
+    }
+}

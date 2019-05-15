@@ -1,0 +1,46 @@
+﻿@page "/fetchdata"
+@inject HttpClient Http
+@using TodoBlazor.Shared
+@using TodoBlazor.Shared.Models
+
+<h1>Todo</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (todos == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>ListId</th>
+                <th>Title</th>
+                <th>IsComplete</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var todo in todos)
+            {
+                <tr>
+                    <td>@todo.Id</td>
+                    <td>@todo.ListId</td>
+                    <td>@todo.Title</td>
+                    <td>@todo.IsComplete</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@functions {
+    IList<TodoItem> todos;
+
+    protected override async Task OnInitAsync()
+    {
+        todos = await Http.GetJsonAsync<IList<TodoItem>>("http://localhost:50763/api/todolist/1/todoitem");
+    }
+}

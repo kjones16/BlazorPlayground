@@ -1,0 +1,95 @@
+﻿@page "/fetchdata"
+@inject HttpClient Http
+@using System.Net;
+@using Telerik.Blazor.Components.Button;
+@using Telerik.Blazor.Components.Grid;
+@using Todo.Blazor.Shared.Models;
+
+<h1>Todo</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+<TelerikButton OnClick="@RefreshData" Primary="true">Refresh</TelerikButton>
+
+<TelerikGrid Data="@todos" EditMode="incell">
+    <TelerikGridColumns>
+        <TelerikGridColumn Field="@(nameof(TodoItem.Id))" Editable="false"></TelerikGridColumn>
+        <TelerikGridColumn Field="@(nameof(TodoItem.ListId))" Title="List Id" Editable="false"></TelerikGridColumn>
+        <TelerikGridColumn Field="@(nameof(TodoItem.Title))" Title="Title"></TelerikGridColumn>
+        <TelerikGridColumn Field="@(nameof(TodoItem.IsComplete))" Title="Complete"></TelerikGridColumn>
+        <TelerikGridCommandColumn>
+            <TelerikGridCommandButton Command="Delete" Icon="delete">Delete</TelerikGridCommandButton>
+            <TelerikGridCommandButton Command="Save" Icon="save" ShowInEdit="true">Apply</TelerikGridCommandButton>
+        </TelerikGridCommandColumn>
+    </TelerikGridColumns>
+    <TelerikGridEvents>
+        <EventsManager OnUpdate="@OnUpdate" OnDelete="@DeleteItem"></EventsManager>
+    </TelerikGridEvents>
+</TelerikGrid>
+
+@functions {
+    IList<TodoItem> todos;
+
+    protected override async Task OnInitAsync()
+    {
+        await RefreshData();
+    }
+
+    public async Task RefreshData()
+    {
+        todos = await Http.GetJsonAsync<IList<TodoItem>>("http://localhost:50763/api/todolist/1/todoitem");
+    }
+
+    private async void DeleteItem(GridCommandEventArgs args)
+    {
+        var argsItem = args.Item as TodoItem;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"http://localhost:50763/api/todoitem/{argsItem.Id}");
+
+            var item = todos.FirstOrDefault(c => c.Id == argsItem.Id);
+
+            if (item != null)
+            {
+                todos.Remove(item);
+            }
+
+            StateHasChanged();
+        }
+        catch (HttpRequestException)
+        {
+            // Don't just stand there do somthing!
+        }
+    }
+
+    private async void OnUpdate(GridCommandEventArgs args)
+    {
+        var changes = args.Item as TodoItem;
+
+        try
+        {
+            ApplyChange(changes);
+
+            await Http.PutJsonAsync($"http://localhost:50763/api/todoitem/{changes.Id}", changes);
+        }
+        catch (HttpRequestException)
+        {
+            changes = await Http.GetJsonAsync<TodoItem>($"http://localhost:50763/api/todoitem/{changes.Id}");
+
+            ApplyChange(changes);
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyChange(TodoItem updateItem)
+    {
+        var item = todos.FirstOrDefault(c => c.Id == updateItem.Id);
+
+        if (item != null)
+        {
+            item.Title = updateItem.Title;
+            item.IsComplete = updateItem.IsComplete;
+        }
+    }
+}
